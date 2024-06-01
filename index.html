@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Designer</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .value {
+            width: 50px;
+        }
+
+        label {
+            display: inline-block;
+            width: 200px;
+        }
+
+        #shots {
+            width: 215px;
+        }
+
+        #channel {
+            width: 225px;
+        }
+    </style>
+    <script>
+        const socket = new WebSocket('ws://localhost:61565');
+        socket.onopen = function (event) {
+            document.getElementById('connectionStatus').textContent = 'Connected';
+        };
+        socket.onclose = function (event) {
+            document.getElementById('connectionStatus').textContent = 'Disconnected';
+        };
+        socket.onmessage = function (event) {
+            console.log('Message from server ', event.data);
+        };
+        socket.onerror = function (error) {
+            console.log('WebSocket Error ', error);
+            document.getElementById('connectionStatus').textContent = 'Disconnected';
+        };
+        async function playSequence() {
+            var script = document.getElementById('sequence').value;
+            eval(script);
+            await playSequence();
+        }
+        function Shot(kick, rumble, channel) {
+            var message = {
+                type: 'Shot',
+                params: [kick, rumble,0, channel],
+            };
+            socket.send(JSON.stringify(message));
+        }
+        function initializeValues() {
+            updateValue('kick', document.getElementById('kick').value);
+            updateValue('rumble', document.getElementById('rumble').value);
+            updateValue('delay', document.getElementById('delay').value);
+            document.getElementById('sequence').placeholder = `This designer:
+* Only supports the Shot function which controls both kick and rumble.
+* The rumbleDuration is set to 0 for all shots because no matter what I set it to, it does nothing on the Provolver.
+* Supports the await sleep function to add ms delays between shots.
+* Validates the script for kick, rumble, and channel values. In addition to validating
+Kickpower=((WeaponFireRate-30ms)/100)*255
+which give the max kick value for a given fire rate.
+* Allows writing your own script and playing it by clicking the Play Sequence button.
+            `;
+        }
+        function updateValue(id, value) {
+            document.getElementById(id).value = value;
+            document.getElementById(id + 'Value').value = value;
+            if (id === 'delayValue') {
+                var kickPower = calculateKickPower(value);
+                constrainMax = document.getElementById('kick');
+                constrainMax.max = kickPower;
+                constrainMaxValue = document.getElementById('kickValue');
+                constrainMaxValue.value = constrainMax.value;
+                constrainMaxValue.max = kickPower;
+            }
+        }
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function calculateKickPower(delay) {
+            return Math.floor(((delay - 30) / 100) * 255);
+        }
+
+        function validateValues(script) {
+            var value = script.replace(/\s+/g, '');
+            var shotLines = script.match(/Shot\((\d+),(\d+),(\d+)\);/g);
+            console.log(shotLines);
+            var errors = [];
+            shotLines.forEach(function (line, index) {
+                var values = line.match(/Shot\((\d+),(\d+),(\d+)\);/);
+                console.log(values);
+                var kick = parseInt(values[1]);
+                var rumble = parseInt(values[2]);
+                var channel = parseInt(values[3]);
+                if (kick < 0 || kick > 255) {
+                    errors.push('Kick value out of range: ' + kick);
+                }
+                if (rumble < 0 || rumble > 255) {
+                    errors.push('Rumble value out of range: ' + rumble);
+                }
+                if (channel < 0 || channel > 7) {
+                    errors.push('Channel value out of range: ' + channel);
+                }
+            });
+            if (errors.length > 0) {
+                document.getElementById('errors').innerHTML = '';
+                errors.forEach(function (error) {
+                    var li = document.createElement('li');
+                    li.textContent = error;
+                    document.getElementById('errors').appendChild(li);
+                });
+                document.getElementById('playSequence').disabled = true;
+            } else {
+                document.getElementById('errors').innerHTML = '';
+                document.getElementById('playSequence').disabled = false;
+            }
+        }
+
+        function generateSequence() {
+            var kick = document.getElementById("kick").value;
+            var rumble = document.getElementById("rumble").value;
+            var channel = document.getElementById("channel").value;
+            var shots = document.getElementById("shots").value;
+            var delay = document.getElementById("delay").value;
+
+            var sequence = "async function playSequence() {\n";
+            sequence += "  for (var i = 0; i < " + shots + "; i++) {\n";
+            sequence += "    Shot(" + kick + ", " + rumble + ", " + channel + ");\n";
+            sequence += "    await sleep(" + delay + ");\n";
+            sequence += "  }\n";
+            sequence += "}\n";
+
+            document.getElementById("sequence").value = sequence;
+        }
+    </script>
+</head>
+
+<body onload="initializeValues()">
+    <h1>Designer</h1>
+    <fieldset>
+        <legend>Params:</legend>
+        <div>
+            <label for="kick">Kick:</label>
+            <input type="range" min="0" max="255" id="kick" oninput="updateValue('kickValue', this.value)">
+            <input type="number" class="value" id="kickValue" min="0" max="255"
+                oninput="updateValue('kick', this.value)">
+        </div>
+        <div>
+            <label for="rumble">Rumble:</label>
+            <input type="range" min="0" max="255" id="rumble" oninput="updateValue('rumbleValue', this.value)">
+            <input type="number" class="value" id="rumbleValue" min="0" max="255"
+                oninput="updateValue('rumble', this.value)">
+        </div>
+
+        <div>
+            <label for="channel">Channel:</label>
+            <select id="channel">
+                <option value="0">All</option>
+                <option value="1">Rifle</option>
+                <option value="2">Rifle Butt</option>
+                <option value="3">Rifle Bolt</option>
+                <option value="4">Pistol 1</option>
+                <option value="5">Pistol 2</option>
+                <option value="6">Other</option>
+                <option value="7">Vest</option>
+            </select>
+
+        </div>
+
+        <div>
+            <label for="shots">Number of Shots:</label>
+            <input type="number" id="shots" min="1" value="1">
+        </div>
+        <div>
+            <label for="delay">Delay between shots (ms):</label>
+            <input type="range" id="delay" min="30" max="130" value="130"
+                oninput="updateValue('delayValue', this.value)">
+            <input type="number" class="value" id="delayValue" min="30" max="130"
+                oninput="updateValue('range', this.value)">
+
+        </div>
+    </fieldset>
+
+    <button onclick="generateSequence()">Generate Sequence</button>
+
+    <div>
+        <h4>Generated Sequence:</h4>
+        <textarea id="sequence" rows="20" cols="65" spellcheck="false" onchange="validateValues(this.value)"></textarea>
+        <ul id="errors"></ul>
+        <div>Connection Status: <span id="connectionStatus">Disconnected</span></div>
+        <button onclick="playSequence()" id="playSequence">Play Sequence</button>
+    </div>
+</body>
+
+</html>

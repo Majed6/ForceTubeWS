@@ -1,0 +1,1 @@
+A websocket passthrough wrapper for the ForceTube API. Simply start ForceTubeWS.exe and call the API at ws://localhost:61565  or visit the shot designer [here](https://dee.codes/ForceTubeWS/) to try it out.
