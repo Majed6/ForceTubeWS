@@ -149,13 +149,13 @@ which give the max kick value for a given fire rate.
         <legend>Params:</legend>
         <div>
             <label for="kick">Kick:</label>
-            <input type="range" min="0" max="255" id="kick" oninput="updateValue('kickValue', this.value)">
+            <input type="range" min="0" max="255" id="kick" oninput="updateValue('kick', this.value)">
             <input type="number" class="value" id="kickValue" min="0" max="255"
                 oninput="updateValue('kick', this.value)">
         </div>
         <div>
             <label for="rumble">Rumble:</label>
-            <input type="range" min="0" max="255" id="rumble" oninput="updateValue('rumbleValue', this.value)">
+            <input type="range" min="0" max="255" id="rumble" oninput="updateValue('rumble', this.value)">
             <input type="number" class="value" id="rumbleValue" min="0" max="255"
                 oninput="updateValue('rumble', this.value)">
         </div>
@@ -182,7 +182,7 @@ which give the max kick value for a given fire rate.
         <div>
             <label for="delay">Delay between shots (ms):</label>
             <input type="range" id="delay" min="30" max="130" value="130"
-                oninput="updateValue('delayValue', this.value)">
+                oninput="updateValue('delay', this.value)">
             <input type="number" class="value" id="delayValue" min="30" max="130"
                 oninput="updateValue('range', this.value)">
 
